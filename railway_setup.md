@@ -195,9 +195,134 @@ neo4j+s://xxxxx.databases.neo4j.io:7687
    ```
 4. Use internal Railway networking to connect
 
-## Step 5: Troubleshooting
+## Step 5: Troubleshooting Railway Deployment Issues
 
-### 5.1 Common Issues
+### 5.1 "Script start.sh not found" Error
+
+If you encounter this error, Railway couldn't determine how to build your app. Try these solutions:
+
+**Solution 1: Verify File Permissions**
+Ensure `start.sh` is executable:
+```bash
+chmod +x start.sh
+git add start.sh
+git commit -m "Make start.sh executable"
+git push
+```
+
+**Solution 2: Alternative Procfile Configurations**
+Try different Procfile configurations:
+
+```
+# Option A: Direct Python execution
+web: python start.py
+
+# Option B: Shell script with permissions
+web: chmod +x start.sh && ./start.sh
+
+# Option C: Using bash explicitly
+web: bash start.sh
+
+# Option D: Heroku-style with PORT variable
+web: python start.py
+```
+
+**Solution 3: Use Railway's Environment Variables for Startup**
+In Railway dashboard, go to "Variables" and set:
+- `RAILWAY_STATIC_URL`: `true`
+- `PORT`: `5006`
+- `START_COMMAND`: `python start.py`
+
+**Solution 4: Manual Deploy Configuration**
+In Railway dashboard:
+1. Go to "Settings" → "Deploy"
+2. Set "Build Command": `pip install -r requirements.txt`
+3. Set "Start Command": `python start.py`
+
+### 5.2 Python Version Issues
+
+If Railway can't find Python or has version conflicts:
+
+1. **Add runtime.txt** with specific Python version:
+```
+python-3.9.18
+```
+
+2. **Update nixpacks.toml** to specify Python version:
+```toml
+[variables]
+PYTHON_VERSION = "3.9.18"
+```
+
+### 5.3 Build Process Issues
+
+**Check Railway Logs:**
+1. Go to Railway dashboard
+2. Click on your project
+3. Go to "Deployments" tab
+4. Click on the failing deployment
+5. Check "Build Logs" and "Deploy Logs"
+
+**Common Build Fixes:**
+```toml
+# In railway.toml - force specific build process
+[build]
+builder = "NIXPACKS"
+buildCommand = "pip install -r requirements.txt"
+
+[deploy]
+startCommand = "python start.py"
+```
+
+### 5.4 Force Railway to Recognize Python Project
+
+Create a simple `setup.py` file:
+```python
+from setuptools import setup, find_packages
+
+setup(
+    name="neo4j-graph-viz",
+    version="1.0.0",
+    packages=find_packages(),
+    install_requires=[
+        line.strip() 
+        for line in open("requirements.txt").readlines()
+    ],
+    python_requires=">=3.8",
+)
+```
+
+### 5.5 Alternative Deployment Methods
+
+**Method 1: Railway CLI Force Deploy**
+```bash
+railway login
+railway link  # Link to existing project
+railway up --detach  # Force deploy
+```
+
+**Method 2: Direct Repository Deploy**
+1. In Railway dashboard, create "New Project"
+2. Choose "Deploy from GitHub repo"
+3. Select your repository
+4. Railway should auto-detect Python project
+
+**Method 3: Docker Deployment**
+Create a `Dockerfile`:
+```dockerfile
+FROM python:3.9-slim
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+EXPOSE 5006
+
+CMD ["python", "start.py"]
+```
+
+Then in Railway, it will automatically detect and use Docker.
 
 **Port Binding Error:**
 - Ensure you're using `0.0.0.0` as host

@@ -1,1 +1,2 @@
-web: python start.py
+web: chmod +x start.sh && ./start.sh
+release: python -c "print('Application deployed successfully')"
